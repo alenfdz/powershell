@@ -12,7 +12,11 @@ Param(
 # Modify the $url 
 #Variables
 $url = "http://download.veeam.com/VeeamBackupOffice365_4.0.0.2516.zip"
-$output = "C:\Packages\Plugins\Microsoft.Compute.CustomScriptExtension\VeeamBackupOffice365_4.0.0.2516.zip"
+$output = "C:\install\VeeamBackupOffice365_4.0.0.2516.zip"
+$source = "C:\install"
+
+#Create install directory
+New-Item -itemtype directory -path $source
 
 #Get Veeam Backup for Office 365 zip
 (New-Object System.Net.WebClient).DownloadFile($url, $output)
@@ -25,9 +29,7 @@ $output = "C:\Packages\Plugins\Microsoft.Compute.CustomScriptExtension\VeeamBack
 #New-Partition -AssignDriveLetter -UseMaximumSize | ` 
 #Format-Volume -FileSystem ReFS -NewFileSystemLabel "datadisk" -Confirm:$false
 
-Expand-Archive C:\Packages\Plugins\Microsoft.Compute.CustomScriptExtension\VeeamBackupOffice365_4.0.0.2516.zip -DestinationPath C:\Packages\Plugins\Microsoft.Compute.CustomScriptExtension\ -Force
-
-$source = "C:\Packages\Plugins\Microsoft.Compute.CustomScriptExtension"
+Expand-Archive C:\install\VeeamBackupOffice365_4.0.0.2516.zip -DestinationPath C:\install\ -Force
 
 ### Veeam Backup Office 365
 $MSIArguments = @(
@@ -75,10 +77,11 @@ Sleep 60
 
 #Create a credential
 #log "Creating credentials"
-$osname = $env:computername
-$fulluser = "$($osname)\$($USERNAME)"
-$secpasswd = ConvertTo-SecureString $PASSWORD -AsPlainText -Force
-$mycreds = New-Object System.Management.Automation.PSCredential($fulluser, $secpasswd)
+#$osname = $env:computername
+#$fulluser = "$($osname)\$($USERNAME)"
+#$secpasswd = ConvertTo-SecureString $PASSWORD -AsPlainText -Force
+# How to do this in AWS?
+#$mycreds = New-Object System.Management.Automation.PSCredential($fulluser, $secpasswd)
 $seckey = ConvertTo-SecureString $SecurityKey -AsPlainText -Force
 
 
@@ -95,7 +98,7 @@ $scriptblock= {
 Import-Module Veeam.Archiver.PowerShell
 Connect-VBOServer
 $proxy = Get-VBOProxy 
-Add-VBORepository -Proxy $proxy -Name "Default Backup Repository 1" -Path "F:\backup repository" -Description "Default Backup Repository 1" -RetentionType ItemLevel
+Add-VBORepository -Proxy $proxy -Name "Default Backup Repository 1" -Path "D:\backup repository" -Description "Default Backup Repository 1" -RetentionType ItemLevel
 $repository = Get-VBORepository -Name "Default Backup Repository"
 Remove-VBORepository -Repository $repository -Confirm:$false
 Add-VBOAmazonS3Account -AccessKey $AccessKey -SecurityKey $seckey 
@@ -109,6 +112,7 @@ $folder = Get-VBOAmazonS3Folder -bucket $container
 Add-VBOAmazonS3ObjectStorageRepository -Folder $folder -Name "VBORepository"
 }
 
-$session = New-PSSession -cn $env:computername -Credential $mycreds 
+# $session = New-PSSession -cn $env:computername -Credential $mycreds 
+$session = New-PSSession -cn $env:computername -Credential $mycreds
 	Invoke-Command -Session $session -ScriptBlock $scriptblock 
 	Remove-PSSession -VMName $env:computername
