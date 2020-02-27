@@ -101,11 +101,11 @@ $proxy = Get-VBOProxy
 Add-VBORepository -Proxy $proxy -Name "Default Backup Repository 1" -Path "D:\backup repository" -Description "Default Backup Repository 1" -RetentionType ItemLevel
 $repository = Get-VBORepository -Name "Default Backup Repository"
 Remove-VBORepository -Repository $repository -Confirm:$false
-Add-VBOAmazonS3Account -AccessKey $AccessKey -SecurityKey $seckey 
-$account = Get-VBOAmazonS3Account -AccessKey $AccessKey
+Add-VBOAmazonS3Account -AccessKey $Using:AccessKey -SecurityKey $Using:seckey 
+$account = Get-VBOAmazonS3Account -AccessKey $Using:AccessKey
 $connection = New-VBOAmazonS3ServiceConnectionSettings -Account $account -RegionType Global
  
-$container = Get-VBOAmazonS3Bucket -AmazonS3ConnectionSettings $connection  -name $BucketName
+$container = Get-VBOAmazonS3Bucket -AmazonS3ConnectionSettings $connection  -name $Using:BucketName
 
 Add-VBOAmazonS3Folder -bucket $container -Name "Veeam"
 $folder = Get-VBOAmazonS3Folder -bucket $container
@@ -113,6 +113,6 @@ Add-VBOAmazonS3ObjectStorageRepository -Folder $folder -Name "VBORepository"
 }
 
 # $session = New-PSSession -cn $env:computername -Credential $mycreds 
-$session = New-PSSession -cn $env:computername -Credential $mycreds
+$session = New-PSSession -cn $env:computername
 	Invoke-Command -Session $session -ScriptBlock $scriptblock 
 	Remove-PSSession -VMName $env:computername
