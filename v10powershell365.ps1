@@ -3,9 +3,7 @@
 Param(
   [string] $AccessKey,
   [string] $SecurityKey,
-  [string] $BucketName,
-  [string] $USERNAME,
-  [string] $PASSWORD
+  [string] $BucketName
  )
 
 
