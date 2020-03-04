@@ -19,14 +19,6 @@ New-Item -itemtype directory -path $source
 #Get Veeam Backup for Office 365 zip
 (New-Object System.Net.WebClient).DownloadFile($url, $output)
 
-
-#Initialize Data Disks
-#Get-Disk | ` 
-#Where partitionstyle -eq 'raw' | ` 
-#Initialize-Disk -PartitionStyle GPT -PassThru | ` 
-#New-Partition -AssignDriveLetter -UseMaximumSize | ` 
-#Format-Volume -FileSystem ReFS -NewFileSystemLabel "datadisk" -Confirm:$false
-
 Expand-Archive C:\install\VeeamBackupOffice365_4.0.0.2516.zip -DestinationPath C:\install\ -Force
 
 ### Veeam Backup Office 365
@@ -72,17 +64,7 @@ Start-Process "msiexec.exe" -ArgumentList $MSIArguments -Wait -NoNewWindow
 
 Sleep 60
 
-
-#Create a credential
-#log "Creating credentials"
-#$osname = $env:computername
-#$fulluser = "$($osname)\$($USERNAME)"
-#$secpasswd = ConvertTo-SecureString $PASSWORD -AsPlainText -Force
-# How to do this in AWS?
-#$mycreds = New-Object System.Management.Automation.PSCredential($fulluser, $secpasswd)
 $seckey = ConvertTo-SecureString $SecurityKey -AsPlainText -Force
-
-
 
 
 $Driveletter = get-wmiobject -class "Win32_Volume" -namespace "root\cimv2" | where-object {$_.DriveLetter -like "D*"}
@@ -96,21 +78,22 @@ $scriptblock= {
 Import-Module Veeam.Archiver.PowerShell
 Connect-VBOServer
 $proxy = Get-VBOProxy 
-Add-VBORepository -Proxy $proxy -Name "Default Backup Repository 1" -Path "D:\backup repository" -Description "Default Backup Repository 1" -RetentionType ItemLevel
-$repository = Get-VBORepository -Name "Default Backup Repository"
-Remove-VBORepository -Repository $repository -Confirm:$false
+
 Add-VBOAmazonS3Account -AccessKey $Using:AccessKey -SecurityKey $Using:seckey 
 $account = Get-VBOAmazonS3Account -AccessKey $Using:AccessKey
 $connection = New-VBOAmazonS3ServiceConnectionSettings -Account $account -RegionType Global
- 
 $container = Get-VBOAmazonS3Bucket -AmazonS3ConnectionSettings $connection  -name $Using:BucketName
-
 Add-VBOAmazonS3Folder -bucket $container -Name "Veeam"
 $folder = Get-VBOAmazonS3Folder -bucket $container
 Add-VBOAmazonS3ObjectStorageRepository -Folder $folder -Name "VBORepository"
+$objectStorage = Get-VBOObjectStorageRepository
+
+Add-VBORepository -Proxy $proxy -Name "Default Backup Repository 1" -Path "D:\backup repository" -ObjectStorageRepository $objectStorage -Description "Default Backup Repository 1" -RetentionType ItemLevel
+$repository = Get-VBORepository -Name "Default Backup Repository"
+Remove-VBORepository -Repository $repository -Confirm:$false
+
 }
 
-# $session = New-PSSession -cn $env:computername -Credential $mycreds 
 $session = New-PSSession -cn $env:computername
 	Invoke-Command -Session $session -ScriptBlock $scriptblock 
 	Remove-PSSession -VMName $env:computername
